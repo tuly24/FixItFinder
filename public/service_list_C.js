@@ -86,6 +86,24 @@ function rateTechnician(technicianUserName) {
         .catch(error => console.error('Error submitting rating:', error));
 }
 
+
+function fetchServices() {
+    fetch('/api/services')
+        .then(response => response.json())
+        .then(services => {
+            const select = document.getElementById('service-select');
+            select.innerHTML = '';
+            services.forEach(service => {
+                const option = document.createElement('option');
+                option.value = service;
+                option.textContent = service;
+                select.appendChild(option);
+            });
+        });
+}
+
+fetchServices();
+
 function goBack() {
     document.getElementById('service-search').style.display = 'block';
     document.getElementById('service-man-list').style.display = 'none';
