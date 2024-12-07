@@ -8,6 +8,7 @@ const jwt = require('jsonwebtoken');
 const { log } = require("console");
 const nodemailer = require('nodemailer');
 const validator = require('validator');
+const fs = require('fs');
 // const auth = require('./middleware/auth');
 const router = express.Router();
 const cors = require('cors');
@@ -687,14 +688,6 @@ app.get('/api/item/:slug', (req, res) => {
 module.exports = app;
 
 
-
-
-
-
-
-
-
-
 app.post('/admin/login', async (req, res) => {
   const { identifier, password } = req.body;
 
@@ -778,14 +771,19 @@ app.get('/api/technicians', async (req, res) => {
 
 app.get('/api/top-technicians', async (req, res) => {
   try {
-      const topTechnicians = await prisma.technician.findMany({
-          orderBy: { ratings: 'desc' },
-          take: 10,
-      });
-      res.json(topTechnicians);
+    const topTechnicians = await prisma.technician.findMany({
+      where: {
+        ratings: {
+          not: null, 
+        },
+      },
+      orderBy: { ratings: 'desc' },
+      take: 10,
+    });
+    res.json(topTechnicians);
   } catch (error) {
-      console.error(error);
-      res.status(500).send('Error fetching top technicians');
+    console.error(error);
+    res.status(500).send('Error fetching top technicians');
   }
 });
 
@@ -859,42 +857,54 @@ app.get('/api/technicians/filter', async (req, res) => {
   }
 });
 
-let services = [
-  "Electrician",
-  "Plumber",
-  "Appliance Repair Technician",
-  "Locksmith",
-  "Carpenter",
-  "Roofing Contractor",
-  "Broadband Service Provider",
-  "Interior Designer",
-  "General Handyman",
-  "HVAC"
-];
+const filePath = path.join(__dirname, 'service.json');
+
+const getServices = () => {
+  return JSON.parse(fs.readFileSync(filePath, 'utf8'));
+};
+
+const saveServices = (services) => {
+  fs.writeFileSync(filePath, JSON.stringify(services, null, 2));
+};
 
 // Get services
 app.get('/api/services', (req, res) => {
+  const services = getServices();
   res.json(services);
 });
 
 // Add a new service
 app.post('/api/services', (req, res) => {
   const newService = req.body.service;
-  if (newService && !services.includes(newService)) {
-      services.push(newService);
-      res.status(201).json({ message: 'Service added successfully.' });
+  if (!newService) {
+    return res.status(400).json({ message: 'Invalid service.' });
+  }
+
+  const services = getServices();
+  if (!services.includes(newService)) {
+    services.push(newService);
+    saveServices(services);
+    res.status(201).json({ message: 'Service added successfully.' });
   } else {
-      res.status(400).json({ message: 'Invalid or duplicate service.' });
+    res.status(400).json({ message: 'Service already exists.' });
   }
 });
 
 // Delete a service
 app.delete('/api/services/:service', (req, res) => {
   const service = req.params.service;
-  services = services.filter(s => s !== service);
-  res.json({ message: 'Service deleted successfully.' });
+    let services = getServices();
+    if (services.includes(service)) {
+        services = services.filter(s => s !== service);
+        saveServices(services);
+        res.json({ message: 'Service deleted successfully.' });
+    } else {
+        res.status(404).json({ message: 'Service not found.' });
+    }
 });
 
 app.get('/admin/login', (req, res) => {
   res.sendFile(path.join(__dirname, 'public', 'admin-login.html')); // admin login page
 });
+
+
