@@ -132,3 +132,20 @@ document.querySelector('form').addEventListener('submit', async function(event) 
         alert("Unable to connect to the server. Please try again later.");
     }
 });
+
+function fetchServices() {
+    fetch('/api/services')
+        .then(response => response.json())
+        .then(services => {
+            const select = document.getElementById('Profession');
+            select.innerHTML = '';
+            services.forEach(service => {
+                const option = document.createElement('option');
+                option.value = service;
+                option.textContent = service;
+                select.appendChild(option);
+            });
+        });
+}
+fetchServices();
+
